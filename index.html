@@ -14,7 +14,7 @@
   }
   body{background:var(--bg);font-family:'Segoe UI',system-ui,sans-serif;
     color:var(--text);min-height:100vh;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;overflow:hidden;}
+    align-items:center;justify-content:center;overflow:hidden;}h
 
   /* Animated background particles */
   .bg-particles{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;overflow:hidden;pointer-events:none;}
@@ -106,7 +106,7 @@
   .welcome p{color:var(--text2);font-size:0.83rem;line-height:1.6;}
 
   /* Key input overlay */
-  .key-overlay{position:fixed;inset:0;background:rgba(13,2,33,0.97);z-index:999;
+  .key-overlay{position:fixed;inset:0;background:rgba(13,2,33,0.97);z-index:999;display:none!important;
     display:flex;align-items:center;justify-content:center;padding:24px;}
   .key-card{background:var(--surface);border:1px solid var(--border);border-radius:24px;
     padding:32px;max-width:440px;width:100%;text-align:center;}
@@ -250,7 +250,7 @@ If the question is unrelated to Anil, politely redirect to ask about Anil instea
 `;
 
 // ── State ──
-let API_KEY = localStorage.getItem('anilbot_key') || '';
+let API_KEY = 'AQ.Ab8RN6JGh4jmoFUGS5o1NgBHE66-JUPgNKdRmqRR3K2Gv2wYug';
 let history = [];
 const msgsEl = document.getElementById('messages');
 const inputEl = document.getElementById('userInput');
@@ -258,7 +258,7 @@ const sendBtn = document.getElementById('sendBtn');
 const overlay = document.getElementById('keyOverlay');
 
 // ── Init ──
-if(API_KEY) overlay.style.display = 'none';
+overlay.style.display = 'none'; // key hardcoded
 
 function saveKey(){
   const k = document.getElementById('apiKeyInput').value.trim();
