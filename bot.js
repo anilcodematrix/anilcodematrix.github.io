@@ -1,4 +1,4 @@
-/* AnilBot - local engine. No API key, no server.
+/* Anil Sharma AI - chat engine. No API key, no server.
  * 1. Answers questions about Anil from a built-in knowledge base
  *    (keyword + typo-tolerant matching, follows up on context).
  * 2. Does maths, tells the time/date.
@@ -26,7 +26,7 @@ const ANIL = {
   },
   projects: [
     { name: "Portfolio website", url: "https://anilkumarsutiharsharma.com.np", desc: "Anil's personal site with his work and contact details.", keys: ["portfolio", "website", "site"] },
-    { name: "AnilBot", url: "https://anilcodematrix.github.io", desc: "This chat assistant. It runs fully in your browser with no API key.", keys: ["anilbot", "chatbot"] },
+    { name: "Anil Sharma AI", url: "https://anilcodematrix.github.io", desc: "This AI chat assistant. It runs fully in your browser with no API key.", keys: ["anilbot", "chatbot"] },
     { name: "Daily AI Agent", url: "https://github.com/anilcodematrix/anil-sharma-daily", desc: "A Python agent on GitHub Actions that commits a daily log with quotes and tech tips.", keys: ["agent", "daily"] },
     { name: "Full-Stack Development", url: "https://github.com/anilcodematrix/Full-Stack-Development-Assignment", desc: "Full-stack web apps with HTML, CSS, JavaScript, PHP and MySQL CRUD.", keys: ["fullstack", "crud", "assignment", "php"] },
     { name: "Concepts of AI", url: "https://github.com/anilcodematrix/Concept-of-AI-and-Technologies", desc: "Jupyter notebooks on classification, regression and deep learning.", keys: ["notebook", "notebooks", "jupyter", "concepts"] },
@@ -41,7 +41,7 @@ const allSkills = Object.values(ANIL.skills).flat();
 const INTENTS = [
   { id: "greet", keys: ["hi", "hello", "hey", "hii", "namaste", "namaskar", "yo", "sup", "morning", "evening", "kasto", "k cha", "khabar"],
     answer: () => pick([
-      "Hello! 👋 I'm AnilBot. Ask me about Anil's skills, projects or how to hire him. You can also ask me general questions.",
+      "Hello! 👋 I'm Anil Sharma's AI. Ask me about Anil's skills, projects or how to hire him. You can also ask me general questions.",
       "Namaste! 🙏 What would you like to know about Anil?",
       "Hey there! I can tell you about Anil, his work, or look up anything you're curious about.",
     ]) },
@@ -49,8 +49,8 @@ const INTENTS = [
     answer: () => pick(["You're welcome! 😊 Anything else?", "Happy to help! Ask me anything else.", "Glad that helped!"]) },
   { id: "bye", keys: ["bye", "goodbye", "later", "cya", "see you"],
     answer: `Bye! 👋 If you'd like to work with Anil, email him at ${link("mailto:" + ANIL.email, ANIL.email)}.` },
-  { id: "botself", keys: ["who are you", "what are you", "your name", "are you ai", "are you real", "anilbot", "how do you work"],
-    answer: "I'm <b>AnilBot</b>, Anil's personal assistant. I run entirely in your browser, so there's no API key and nothing to set up. I know Anil's profile, I can do maths, and for general questions I look things up on Wikipedia." },
+  { id: "botself", keys: ["who are you", "what are you", "your name", "are you ai", "are you real", "anilbot", "anil sharma ai", "how do you work"],
+    answer: "I'm <b>Anil Sharma's AI</b>, his personal assistant. I run entirely in your browser, so there's no API key and nothing to set up. I know Anil's profile, I can do maths, and for general questions I look things up on Wikipedia." },
   { id: "about", keys: ["who is anil", "about anil", "who is he", "introduce", "background", "himself", "story", "bio"],
     answer: `<b>${ANIL.name}</b> is a full-stack developer and AI engineer from Kathmandu, Nepal 🇳🇵.<br/><br/>
 • Builds web apps end to end, from database to UI<br/>
@@ -231,8 +231,8 @@ async function think(raw) {
 
 // ----------------------------------------------------- free AI (no key) ----
 // Uses the free, keyless Pollinations text API (OpenAI-compatible).
-// If it is slow or busy, AnilBot falls back to the local engine above.
-const SYSTEM_PROMPT = `You are AnilBot, a friendly, smart AI assistant on the personal site of ${ANIL.name}.
+// If it is slow or busy, the assistant falls back to the local engine above.
+const SYSTEM_PROMPT = `You are "Anil Sharma AI", a friendly, smart AI assistant on the personal site of ${ANIL.name}.
 You can answer ANY question the visitor asks: general knowledge, coding, maths, writing, advice, anything. Be accurate, clear and concise (under 150 words unless asked for detail). Use short paragraphs or "- " bullets. Use **bold** sparingly. Reply in the visitor's language (English, Nepali or Romanized Nepali).
 When asked about Anil, speak about him in the third person and use ONLY these facts (never invent anything about him):
 - Full-stack developer and AI engineer from Kathmandu, Nepal (UTC+5:45)
