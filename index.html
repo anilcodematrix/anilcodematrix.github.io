@@ -105,6 +105,8 @@
   .welcome h2{color:var(--accent3);font-size:1.1rem;margin-bottom:6px;}
   .welcome p{color:var(--text2);font-size:0.83rem;line-height:1.6;}
 
+  .cursor{display:inline-block;margin-left:2px;color:var(--accent3);animation:blink 1s steps(2) infinite;}
+  @keyframes blink{50%{opacity:0}}
   @media(max-width:600px){.msg-bubble{max-width:88%}.quick-btn{font-size:0.68rem}}
 </style>
 </head>
@@ -167,6 +169,6 @@
   </div>
 </div>
 
-<script src="bot.js?v=5"></script>
+<script src="bot.js?v=6"></script>
 </body>
 </html>

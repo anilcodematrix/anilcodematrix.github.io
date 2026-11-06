@@ -245,41 +245,61 @@ If asked something about Anil that isn't listed, say you don't know and suggest 
 
 const chatHistory = [];
 
-async function callModel(model, messages) {
+// Streams the reply token by token. Gives up quickly if the free service
+// doesn't start answering in time, so the visitor never waits long.
+async function streamModel(model, messages, onText, firstTokenMs) {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 30000);
+  let timer = setTimeout(() => ctrl.abort(), firstTokenMs);
   try {
     const res = await fetch("https://text.pollinations.ai/openai", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       signal: ctrl.signal,
-      body: JSON.stringify({ model, messages, referrer: "anilcodematrix.github.io" }),
+      body: JSON.stringify({ model, messages, stream: true, referrer: "anilcodematrix.github.io" }),
     });
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    const data = await res.json();
-    const reply = data?.choices?.[0]?.message?.content?.trim();
-    if (!reply) throw new Error("empty reply");
-    return reply;
+    if (!res.ok || !res.body) throw new Error("HTTP " + res.status);
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "", text = "";
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split("\n");
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith("data:")) continue;
+        const payload = line.slice(5).trim();
+        if (payload === "[DONE]") continue;
+        try {
+          const piece = JSON.parse(payload)?.choices?.[0]?.delta?.content;
+          if (piece) {
+            if (!text) { clearTimeout(timer); timer = setTimeout(() => ctrl.abort(), 45000); }
+            text += piece;
+            onText(text);
+          }
+        } catch (e) {}
+      }
+    }
+    if (!text.trim()) throw new Error("empty reply");
+    return text.trim();
   } finally {
     clearTimeout(timer);
   }
 }
 
-async function askAI(question) {
+async function askAI(question, onText) {
   chatHistory.push({ role: "user", content: question });
-  const messages = [{ role: "system", content: SYSTEM_PROMPT }, ...chatHistory.slice(-10)];
-  // The free service is shared, so retry a few times with backoff before giving up.
-  const plan = [["openai", 0], ["openai-fast", 2500], ["openai", 6000], ["openai-fast", 10000]];
+  const messages = [{ role: "system", content: SYSTEM_PROMPT }, ...chatHistory.slice(-8)];
+  const plan = [["openai-fast", 9000], ["openai", 9000]]; // max ~18s before fallback
   let lastErr;
   for (const [model, wait] of plan) {
-    if (wait) await new Promise(r => setTimeout(r, wait));
     try {
-      const reply = await callModel(model, messages);
+      const reply = await streamModel(model, messages, t => onText(mdToHtml(t)), wait);
       chatHistory.push({ role: "assistant", content: reply });
       return mdToHtml(reply);
     } catch (e) {
       lastErr = e;
-      if (e.name === "AbortError") break;
     }
   }
   chatHistory.pop();
@@ -300,12 +320,31 @@ function mdToHtml(md) {
   return h.replace(/\n/g, "<br/>");
 }
 
-async function answer(text) {
-  // instant local answers for maths and time
-  const instant = maths(text) || timeDate(norm(text));
-  if (instant) return instant;
+// Instant answers that never need the network.
+function localFirst(raw) {
+  const text = norm(raw), words = text.split(" ");
+  const quick = maths(raw) || timeDate(text) || skillCheck(text) || projectDetail(words);
+  if (quick) return quick;
+  const aboutAnil = /\b(anil|sharma|he|him|his)\b/.test(text);
+  const ranked = INTENTS.map(i => ({ i, s: scoreIntent(text, words, i) })).sort((x, y) => y.s - x.s);
+  const best = ranked[0];
+  const small = ["greet", "thanks", "bye", "botself"].includes(best.i.id);
+  // short greetings / thanks, or clear questions about Anil
+  if ((small && words.length <= 4 && best.s >= 1) || (aboutAnil && best.s >= 1 && !small)) {
+    const out = typeof best.i.answer === "function" ? best.i.answer() : best.i.answer;
+    const second = ranked[1];
+    if (!small && second.s >= 1 && !["greet", "thanks", "bye", "botself"].includes(second.i.id))
+      return out + "<br/><br/>" + (typeof second.i.answer === "function" ? second.i.answer() : second.i.answer);
+    return out;
+  }
+  return null;
+}
+
+async function answer(text, onText) {
+  const local = localFirst(text);
+  if (local) return local;
   try {
-    return await askAI(text);
+    return await askAI(text, onText);
   } catch (e) {
     console.warn("AI unavailable, using local engine:", e);
     return await think(text);
@@ -343,9 +382,13 @@ function showTyping() {
   const div = document.createElement("div");
   div.className = "msg bot";
   div.id = "typing-indicator";
-  div.innerHTML = `<div class="msg-avatar">A</div><div><div class="msg-bubble"><div class="typing"><span></span><span></span><span></span></div></div></div>`;
+  div.innerHTML = `<div class="msg-avatar">A</div><div><div class="msg-bubble"><div class="typing"><span></span><span></span><span></span><em class="typing-note" style="margin-left:8px;font-size:.72rem;opacity:.7"></em></div></div></div>`;
   msgsEl.appendChild(div);
   msgsEl.scrollTop = msgsEl.scrollHeight;
+  const note = div.querySelector(".typing-note");
+  const t1 = setTimeout(() => { note.textContent = "Thinking..."; }, 2500);
+  const t2 = setTimeout(() => { note.textContent = "Almost there..."; }, 8000);
+  return { el: div, stop() { clearTimeout(t1); clearTimeout(t2); } };
 }
 
 function send(text) { inputEl.value = text; sendMsg(); }
@@ -357,13 +400,26 @@ async function sendMsg() {
   inputEl.style.height = "auto";
   sendBtn.disabled = true;
   appendMsg("user", esc(text).replace(/\n/g, "<br/>"));
-  showTyping();
-  const started = Date.now();
+  const typing = showTyping();
+  let liveBubble = null;
+  const onText = html => {
+    if (!liveBubble) {
+      typing.stop();
+      typing.el.remove();
+      appendMsg("bot", "");
+      liveBubble = msgsEl.lastElementChild.querySelector(".msg-bubble");
+    }
+    const nearBottom = msgsEl.scrollHeight - msgsEl.scrollTop - msgsEl.clientHeight < 80;
+    liveBubble.innerHTML = html + '<span class="cursor">▍</span>';
+    if (nearBottom) msgsEl.scrollTop = msgsEl.scrollHeight;
+  };
   let reply;
-  try { reply = await answer(text); } catch (e) { reply = "Something went wrong. Please try again."; console.error(e); }
-  await new Promise(r => setTimeout(r, Math.max(0, 450 - (Date.now() - started))));
-  document.getElementById("typing-indicator")?.remove();
-  appendMsg("bot", reply);
+  try { reply = await answer(text, onText); } catch (e) { reply = "Something went wrong. Please try again."; console.error(e); }
+  typing.stop();
+  typing.el.remove();
+  if (liveBubble) liveBubble.innerHTML = reply;
+  else appendMsg("bot", reply);
+  msgsEl.scrollTop = msgsEl.scrollHeight;
   sendBtn.disabled = false;
   inputEl.focus();
 }
