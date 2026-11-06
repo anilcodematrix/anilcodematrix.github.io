@@ -174,10 +174,11 @@ async function wikipedia(question) {
   if (q.length < 2) return null;
   const alias = { rag: "Retrieval-augmented generation", ml: "Machine learning", ai: "Artificial intelligence", llm: "Large language model", llms: "Large language model", api: "API", ui: "User interface", ux: "User experience design" };
   q = alias[q.toLowerCase()] || q;
-  const search = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q)}&srlimit=1&format=json&origin=*`).then(r => r.json());
+  const sig = AbortSignal.timeout ? AbortSignal.timeout(4000) : undefined;
+  const search = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q)}&srlimit=1&format=json&origin=*`, { signal: sig }).then(r => r.json());
   const hit = search?.query?.search?.[0];
   if (!hit) return null;
-  const sum = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(hit.title.replace(/ /g, "_"))}`).then(r => r.json());
+  const sum = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(hit.title.replace(/ /g, "_"))}`, { signal: sig }).then(r => r.json());
   if (!sum?.extract) return null;
   let text = sum.extract;
   if (text.length > 650) text = text.slice(0, text.lastIndexOf(". ", 650) + 1) || text.slice(0, 650) + "...";
@@ -291,7 +292,7 @@ async function streamModel(model, messages, onText, firstTokenMs) {
 async function askAI(question, onText) {
   chatHistory.push({ role: "user", content: question });
   const messages = [{ role: "system", content: SYSTEM_PROMPT }, ...chatHistory.slice(-8)];
-  const plan = [["openai-fast", 9000], ["openai", 9000]]; // max ~18s before fallback
+  const plan = [["openai-fast", 7000], ["openai", 5000]]; // max ~12s before fallback
   let lastErr;
   for (const [model, wait] of plan) {
     try {
@@ -387,7 +388,7 @@ function showTyping() {
   msgsEl.scrollTop = msgsEl.scrollHeight;
   const note = div.querySelector(".typing-note");
   const t1 = setTimeout(() => { note.textContent = "Thinking..."; }, 2500);
-  const t2 = setTimeout(() => { note.textContent = "Almost there..."; }, 8000);
+  const t2 = setTimeout(() => { note.textContent = "Almost there..."; }, 6000);
   return { el: div, stop() { clearTimeout(t1); clearTimeout(t2); } };
 }
 
