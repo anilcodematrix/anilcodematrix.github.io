@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>AnilBot — Chat with Anil's AI Assistant</title>
+<title>AnilBot - Chat with Anil's AI Assistant</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   :root{
@@ -14,7 +14,7 @@
   }
   body{background:var(--bg);font-family:'Segoe UI',system-ui,sans-serif;
     color:var(--text);min-height:100vh;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;overflow:hidden;}h
+    align-items:center;justify-content:center;overflow:hidden;}
 
   /* Animated background particles */
   .bg-particles{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;overflow:hidden;pointer-events:none;}
@@ -105,23 +105,6 @@
   .welcome h2{color:var(--accent3);font-size:1.1rem;margin-bottom:6px;}
   .welcome p{color:var(--text2);font-size:0.83rem;line-height:1.6;}
 
-  /* Key input overlay */
-  .key-overlay{position:fixed;inset:0;background:rgba(13,2,33,0.97);z-index:999;display:none!important;
-    display:flex;align-items:center;justify-content:center;padding:24px;}
-  .key-card{background:var(--surface);border:1px solid var(--border);border-radius:24px;
-    padding:32px;max-width:440px;width:100%;text-align:center;}
-  .key-card h2{color:var(--accent3);font-size:1.2rem;margin-bottom:8px;}
-  .key-card p{color:var(--text2);font-size:0.83rem;margin-bottom:20px;line-height:1.6;}
-  .key-input{width:100%;background:var(--bg);border:1px solid var(--border);
-    color:var(--text);padding:12px 16px;border-radius:12px;font-size:0.85rem;
-    outline:none;font-family:monospace;margin-bottom:12px;}
-  .key-input:focus{border-color:var(--accent);}
-  .key-btn{width:100%;background:linear-gradient(135deg,var(--accent),var(--accent2));
-    border:none;color:#fff;padding:12px;border-radius:12px;font-size:0.9rem;
-    font-weight:600;cursor:pointer;transition:all 0.2s;}
-  .key-btn:hover{opacity:0.9;}
-  .key-note{margin-top:12px;font-size:0.73rem;color:var(--text2);}
-
   @media(max-width:600px){.msg-bubble{max-width:88%}.quick-btn{font-size:0.68rem}}
 </style>
 </head>
@@ -130,20 +113,6 @@
 <!-- Animated background -->
 <div class="bg-particles" id="particles"></div>
 
-<!-- API Key Overlay -->
-<div class="key-overlay" id="keyOverlay">
-  <div class="key-card">
-    <img src="https://avatars.githubusercontent.com/anilcodematrix?v=4"
-         style="width:64px;height:64px;border-radius:50%;border:2px solid #7c3aed;margin-bottom:16px;"/>
-    <h2>AnilBot — Enter API Key</h2>
-    <p>Enter your Gemini API key to activate AnilBot.<br/>
-       Get one free at <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:#c084fc">aistudio.google.com</a></p>
-    <input class="key-input" id="apiKeyInput" type="password" placeholder="AIza...your-gemini-key"/>
-    <button class="key-btn" onclick="saveKey()">Activate AnilBot</button>
-    <p class="key-note">Your key is stored only in your browser. Never shared.</p>
-  </div>
-</div>
-
 <!-- Header -->
 <div class="header">
   <div class="avatar">
@@ -151,7 +120,7 @@
   </div>
   <div class="header-info">
     <h1>AnilBot</h1>
-    <p>AI Assistant — Powered by Gemini</p>
+    <p>Smart assistant - works instantly, no API key</p>
   </div>
   <div class="status-dot" title="Online"></div>
   <a href="https://github.com/anilcodematrix" target="_blank" class="github-link">View Profile</a>
@@ -167,8 +136,8 @@
           <img src="https://avatars.githubusercontent.com/anilcodematrix?v=4" alt="Anil"/>
           <h2>Hi! I am AnilBot</h2>
           <p>I am Anil Kumar Sutihar Sharma's personal AI assistant.<br/>
-             Ask me anything about Anil — his skills, projects, experience,<br/>
-             how to contact him, or anything else!</p>
+             Ask me about Anil's skills, projects and availability,<br/>
+             or ask a general question and I'll look it up.</p>
         </div>
         <div class="msg-time">Just now</div>
       </div>
@@ -182,9 +151,10 @@
       <button class="quick-btn" onclick="send('What projects has he built?')">Projects</button>
       <button class="quick-btn" onclick="send('Is he available to hire?')">Available to hire?</button>
       <button class="quick-btn" onclick="send('How can I contact Anil?')">Contact</button>
+      <button class="quick-btn" onclick="send('What is RAG?')">What is RAG?</button>
     </div>
     <div class="input-row">
-      <textarea id="userInput" placeholder="Ask anything about Anil..." rows="1"
+      <textarea id="userInput" placeholder="Ask anything..." rows="1"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}"
         oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
       <button class="send-btn" id="sendBtn" onclick="sendMsg()">
@@ -197,199 +167,6 @@
   </div>
 </div>
 
-<script>
-// ── Anil's full profile context for the AI ──
-const ANIL_CONTEXT = `
-You are AnilBot, the personal AI assistant of Anil Kumar Sutihar Sharma.
-You know everything about Anil and answer questions about him helpfully, warmly and concisely.
-Always speak about Anil in third person unless roleplay is needed.
-Keep answers under 120 words unless a detailed question is asked.
-Format nicely — use line breaks and bullet points where helpful.
-
-ANIL'S COMPLETE PROFILE:
-- Full Name: Anil Kumar Sutihar Sharma
-- Username: anilcodematrix
-- Location: Kathmandu, Nepal (UTC+5:45)
-- Role: Full-Stack Developer and AI/ML Engineer
-- Email: anil.codematrix@gmail.com
-- LinkedIn: linkedin.com/in/anil-kumar-sutihar-sharma-275122316
-- Instagram: @_anilsharma_10
-- Facebook: anil.sharma.440897
-- GitHub: github.com/anilcodematrix
-- Status: Open to collaborate, freelance, internships and full-time opportunities
-
-TECHNICAL SKILLS:
-- Languages: Python (Expert), JavaScript (Advanced), TypeScript (Advanced)
-- Frontend: React, Next.js, Tailwind CSS, HTML/CSS
-- Backend: Node.js, Express, FastAPI, Django
-- AI/ML: TensorFlow, PyTorch, scikit-learn, LangChain, RAG systems
-- Databases: PostgreSQL, MongoDB, MySQL, Supabase, Firebase
-- DevOps: Docker, Git, Linux, GitHub Actions
-- Cloud: Firebase, Vercel, AWS (Learning)
-
-PROJECTS:
-1. Full-Stack-Development-Assignment — Full-stack web apps using HTML, CSS, JS, PHP, MySQL CRUD — github.com/anilcodematrix/Full-Stack-Development-Assignment
-2. Concept-of-AI-and-Technologies — AI/ML notebooks with classification, regression, deep learning — github.com/anilcodematrix/Concept-of-AI-and-Technologies
-3. daily-ai-agent — GitHub bot that auto-commits daily with AI quotes and tech tips — github.com/anilcodematrix/daily-ai-agent
-4. anilcodematrix.github.io — This personal AI chatbot website
-
-CURRENT FOCUS:
-- Building Full-Stack AI-Powered SaaS applications
-- Learning MLOps, Deep Learning architectures, RAG systems
-- Open to collaborate on open-source and AI projects
-
-FUN FACTS:
-- Built a GitHub bot that makes automatic daily commits with AI content
-- Has 87 total GitHub contributions, 65 commits, 19 PRs
-- Timezone UTC+5:45 — Nepal has its own unique half-hour offset!
-- Passion: "Turning data into decisions"
-
-If asked about contact: Direct them to email anil.codematrix@gmail.com or LinkedIn.
-If asked about hire/work: Yes, Anil is actively open to freelance, collaboration and jobs.
-If the question is unrelated to Anil, politely redirect to ask about Anil instead.
-`;
-
-// ── State ──
-let API_KEY = 'AQ.Ab8RN6JGh4jmoFUGS5o1NgBHE66-JUPgNKdRmqRR3K2Gv2wYug';
-let history = [];
-const msgsEl = document.getElementById('messages');
-const inputEl = document.getElementById('userInput');
-const sendBtn = document.getElementById('sendBtn');
-const overlay = document.getElementById('keyOverlay');
-
-// ── Init ──
-overlay.style.display = 'none'; // key hardcoded
-
-function saveKey(){
-  const k = document.getElementById('apiKeyInput').value.trim();
-  if(!k){alert('Please enter a valid API key');return;}
-  API_KEY = k;
-  localStorage.setItem('anilbot_key', k);
-  overlay.style.display = 'none';
-}
-
-// ── Particles ──
-(function(){
-  const container = document.getElementById('particles');
-  for(let i=0;i<18;i++){
-    const p = document.createElement('div');
-    p.className = 'particle';
-    const size = Math.random()*6+3;
-    p.style.cssText = `width:${size}px;height:${size}px;
-      left:${Math.random()*100}%;
-      animation-duration:${Math.random()*20+12}s;
-      animation-delay:${Math.random()*10}s;`;
-    container.appendChild(p);
-  }
-})();
-
-// ── Helpers ──
-function timeStr(){
-  return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-}
-
-function appendMsg(role, text){
-  const div = document.createElement('div');
-  div.className = 'msg ' + role;
-  const initial = role === 'bot' ? 'A' : 'Y';
-  div.innerHTML = `
-    <div class="msg-avatar">${initial}</div>
-    <div>
-      <div class="msg-bubble">${text.replace(/\n/g,'<br/>')}</div>
-      <div class="msg-time">${timeStr()}</div>
-    </div>`;
-  msgsEl.appendChild(div);
-  msgsEl.scrollTop = msgsEl.scrollHeight;
-  return div;
-}
-
-function showTyping(){
-  const div = document.createElement('div');
-  div.className = 'msg bot';
-  div.id = 'typing-indicator';
-  div.innerHTML = `
-    <div class="msg-avatar">A</div>
-    <div><div class="msg-bubble"><div class="typing">
-      <span></span><span></span><span></span>
-    </div></div></div>`;
-  msgsEl.appendChild(div);
-  msgsEl.scrollTop = msgsEl.scrollHeight;
-}
-
-function removeTyping(){
-  const t = document.getElementById('typing-indicator');
-  if(t) t.remove();
-}
-
-// ── Send ──
-function send(text){
-  inputEl.value = text;
-  sendMsg();
-}
-
-async function sendMsg(){
-  const text = inputEl.value.trim();
-  if(!text || sendBtn.disabled) return;
-  if(!API_KEY){overlay.style.display='flex';return;}
-
-  inputEl.value = '';
-  inputEl.style.height = 'auto';
-  sendBtn.disabled = true;
-
-  appendMsg('user', text);
-  history.push({role:'user', parts:[{text}]});
-  showTyping();
-
-  try{
-    // Build contents with system context prepended
-    const contents = [
-      {role:'user', parts:[{text: ANIL_CONTEXT + '\n\nUser question: ' + history[0].parts[0].text}]},
-      ...history.slice(1).map(h=>({role:h.role, parts:h.parts}))
-    ];
-
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`,
-      {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({
-          contents,
-          systemInstruction:{parts:[{text: ANIL_CONTEXT}]},
-          generationConfig:{temperature:0.7, maxOutputTokens:400}
-        })
-      }
-    );
-
-    const data = await res.json();
-
-    if(data.error){
-      removeTyping();
-      if(data.error.code === 400 || data.error.code === 401 || data.error.code === 403){
-        localStorage.removeItem('anilbot_key');
-        API_KEY = '';
-        appendMsg('bot', 'Invalid API key. Please enter a valid Gemini API key.');
-        overlay.style.display = 'flex';
-      } else {
-        appendMsg('bot', 'Something went wrong: ' + (data.error.message || 'Unknown error'));
-      }
-      sendBtn.disabled = false;
-      return;
-    }
-
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not generate a response.';
-    removeTyping();
-    appendMsg('bot', reply);
-    history.push({role:'model', parts:[{text:reply}]});
-
-  } catch(e){
-    removeTyping();
-    appendMsg('bot', 'Connection error. Please check your internet and try again.');
-    console.error(e);
-  }
-
-  sendBtn.disabled = false;
-  inputEl.focus();
-}
-</script>
+<script src="bot.js"></script>
 </body>
 </html>
