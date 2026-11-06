@@ -3,6 +3,8 @@
  *    (keyword + typo-tolerant matching, follows up on context).
  * 2. Does maths, tells the time/date.
  * 3. For general questions, looks the topic up on Wikipedia (free, keyless).
+ * 4. Any other question goes to a free, keyless AI model (Pollinations), with
+ *    the local engine as a fallback.
  */
 
 // ------------------------------------------------------------ profile ----
@@ -226,6 +228,78 @@ async function think(raw) {
   return `I'm not sure about that one 🤔<br/><br/>Try asking:<br/>• "Who is Anil?"<br/>• "Does he know React?"<br/>• "What projects has he built?"<br/>• "What is machine learning?"<br/><br/>Or ask Anil directly: ${link("mailto:" + ANIL.email, ANIL.email)}`;
 }
 
+
+// ----------------------------------------------------- free AI (no key) ----
+// Uses the free, keyless Pollinations text API (OpenAI-compatible).
+// If it is slow or busy, AnilBot falls back to the local engine above.
+const SYSTEM_PROMPT = `You are AnilBot, a friendly, smart AI assistant on the personal site of ${ANIL.name}.
+You can answer ANY question the visitor asks: general knowledge, coding, maths, writing, advice, anything. Be accurate, clear and concise (under 150 words unless asked for detail). Use short paragraphs or "- " bullets. Use **bold** sparingly. Reply in the visitor's language (English, Nepali or Romanized Nepali).
+When asked about Anil, speak about him in the third person and use ONLY these facts (never invent anything about him):
+- Full-stack developer and AI engineer from Kathmandu, Nepal (UTC+5:45)
+- Skills: ${Object.entries(ANIL.skills).map(([k, v]) => k + ": " + v.join(", ")).join("; ")}
+- Projects: ${ANIL.projects.map(p => p.name + " (" + p.url + "): " + p.desc).join(" | ")}
+- Current focus: building AI-powered SaaS; learning MLOps, deep learning and RAG
+- Open to freelance work, collaboration and jobs
+- Website: ${ANIL.website} | Email: ${ANIL.email} | GitHub: ${ANIL.github} | LinkedIn: ${ANIL.linkedin} | Instagram: ${ANIL.instagram}
+If asked something about Anil that isn't listed, say you don't know and suggest emailing him.`;
+
+const chatHistory = [];
+
+async function askAI(question) {
+  chatHistory.push({ role: "user", content: question });
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 30000);
+  try {
+    const res = await fetch("https://text.pollinations.ai/openai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal: ctrl.signal,
+      body: JSON.stringify({
+        model: "openai",
+        messages: [{ role: "system", content: SYSTEM_PROMPT }, ...chatHistory.slice(-10)],
+        referrer: "anilcodematrix.github.io",
+      }),
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    const reply = data?.choices?.[0]?.message?.content?.trim();
+    if (!reply) throw new Error("empty reply");
+    chatHistory.push({ role: "assistant", content: reply });
+    return mdToHtml(reply);
+  } catch (e) {
+    chatHistory.pop();
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Minimal, safe markdown: escape first, then format.
+function mdToHtml(md) {
+  let h = esc(md);
+  h = h.replace(/```[\w-]*\n?([\s\S]*?)```/g, (_, c) => `<pre style="white-space:pre-wrap;background:#0d0221;border:1px solid #2d1b69;border-radius:8px;padding:8px;font-size:.8rem;overflow-x:auto"><code>${c.trim()}</code></pre>`);
+  h = h.replace(/`([^`\n]+)`/g, '<code style="background:#0d0221;padding:1px 5px;border-radius:4px">$1</code>');
+  h = h.replace(/\*\*([^*\n]+)\*\*/g, "<b>$1</b>");
+  h = h.replace(/(^|\s)\*([^*\n]+)\*(?=\s|$|[.,!?])/g, "$1<i>$2</i>");
+  h = h.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  h = h.replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
+  h = h.replace(/^#{1,6}\s+(.+)$/gm, "<b>$1</b>");
+  h = h.replace(/^\s*[-*•]\s+/gm, "• ");
+  return h.replace(/\n/g, "<br/>");
+}
+
+async function answer(text) {
+  // instant local answers for maths and time
+  const instant = maths(text) || timeDate(norm(text));
+  if (instant) return instant;
+  try {
+    return await askAI(text);
+  } catch (e) {
+    console.warn("AI unavailable, using local engine:", e);
+    return await think(text);
+  }
+}
+
 // ----------------------------------------------------------------- UI ----
 const msgsEl = document.getElementById("messages");
 const inputEl = document.getElementById("userInput");
@@ -274,7 +348,7 @@ async function sendMsg() {
   showTyping();
   const started = Date.now();
   let reply;
-  try { reply = await think(text); } catch (e) { reply = "Something went wrong. Please try again."; console.error(e); }
+  try { reply = await answer(text); } catch (e) { reply = "Something went wrong. Please try again."; console.error(e); }
   await new Promise(r => setTimeout(r, Math.max(0, 450 - (Date.now() - started))));
   document.getElementById("typing-indicator")?.remove();
   appendMsg("bot", reply);
