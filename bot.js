@@ -245,8 +245,7 @@ If asked something about Anil that isn't listed, say you don't know and suggest 
 
 const chatHistory = [];
 
-async function askAI(question) {
-  chatHistory.push({ role: "user", content: question });
+async function callModel(model, messages) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 30000);
   try {
@@ -254,24 +253,37 @@ async function askAI(question) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       signal: ctrl.signal,
-      body: JSON.stringify({
-        model: "openai",
-        messages: [{ role: "system", content: SYSTEM_PROMPT }, ...chatHistory.slice(-10)],
-        referrer: "anilcodematrix.github.io",
-      }),
+      body: JSON.stringify({ model, messages, referrer: "anilcodematrix.github.io" }),
     });
     if (!res.ok) throw new Error("HTTP " + res.status);
     const data = await res.json();
     const reply = data?.choices?.[0]?.message?.content?.trim();
     if (!reply) throw new Error("empty reply");
-    chatHistory.push({ role: "assistant", content: reply });
-    return mdToHtml(reply);
-  } catch (e) {
-    chatHistory.pop();
-    throw e;
+    return reply;
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function askAI(question) {
+  chatHistory.push({ role: "user", content: question });
+  const messages = [{ role: "system", content: SYSTEM_PROMPT }, ...chatHistory.slice(-10)];
+  // The free service is shared, so retry a few times with backoff before giving up.
+  const plan = [["openai", 0], ["openai-fast", 2500], ["openai", 6000], ["openai-fast", 10000]];
+  let lastErr;
+  for (const [model, wait] of plan) {
+    if (wait) await new Promise(r => setTimeout(r, wait));
+    try {
+      const reply = await callModel(model, messages);
+      chatHistory.push({ role: "assistant", content: reply });
+      return mdToHtml(reply);
+    } catch (e) {
+      lastErr = e;
+      if (e.name === "AbortError") break;
+    }
+  }
+  chatHistory.pop();
+  throw lastErr;
 }
 
 // Minimal, safe markdown: escape first, then format.
